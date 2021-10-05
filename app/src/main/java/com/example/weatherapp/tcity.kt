@@ -20,8 +20,28 @@ class tcity {
         @SerializedName("humidity")
         var humidity:Float?=null
     }
-
-
+    @SerializedName("wind")
+    var wind:Wind?=null
+    class Wind{
+        @SerializedName("speed")
+        var speed: Float?=null
+    }
+    @SerializedName("weather")
+    var weather: Array<rand>? =null
+    class rand{
+        @SerializedName("description")
+        var description: String?=null
+    }
+    @SerializedName("sys")
+    var sys: SYS?=null
+    class SYS{
+        @SerializedName("sunrise")
+        var sunrise:Int?=null
+        @SerializedName("sunset")
+        var sunset:Int?=null
+    }
+    @SerializedName("dt")
+    var dt:Int?=null
 
 
 }

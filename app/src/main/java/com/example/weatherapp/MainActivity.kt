@@ -1,5 +1,6 @@
 package com.example.weatherapp
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Bundle
 import android.view.View
@@ -7,13 +8,9 @@ import android.widget.*
 import androidx.annotation.RawRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.view.isVisible
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import com.google.gson.stream.JsonReader
 import kotlinx.coroutines.*
-import org.json.JSONObject
-import java.lang.Exception
 import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
@@ -27,47 +24,63 @@ class MainActivity : AppCompatActivity() {
     var countries=ArrayList<String>()
     var ctid=ArrayList<Int>()
     var sell:Int = 0
+    var adrli =arrayListOf<String>()
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         sel=findViewById(R.id.spncity)
+
         var myJson = this.jsonToClass<cid>(R.raw.citylist)
 
          for (i in myJson.cd!!){
              cities.add(i.name!!)
              countries.add(i.country!!)
              ctid.add(i.id!!)
+             adrli.add("${i.name},${i.country}")
          }
-        var jasonread: GsonBuilder =GsonBuilder()
-        jasonread.setLenient()
-        var a=jasonread.create()
-        var json=a.fromJson(URL("https://api.openweathermap.org/data/2.5/weather?zip=${ctid[sell]}&units=metric&appid=$APIkey").readText(Charsets.UTF_8), tcity::class.java)
-        json.
+        sel.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item, adrli)
+        sel.onItemSelectedListener= object: AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View, position: Int, id: Long){
+                sell= position
+                APIrequest()
 
+            }
 
-
-         fun requestAPI(){
-            println("CITY: ${cid.city.name}")
-            CoroutineScope(Dispatchers.IO).launch {
-                updateStatus(-1)
-                val data = async {
-                    fetchWeatherData()
-                }.await()
-                if(data.isNotEmpty()){
-                    updateWeatherData(data)
-                    updateStatus(0)
-                }else{
-                    updateStatus(1)
-                }
+            override fun onNothingSelected(p0: AdapterView<*>?) {
+                null
             }
         }
 
-
-
     }
 
-    private suspend fun updateWeatherData(result: String){
+    fun APIrequest() {
+
+        CoroutineScope(Dispatchers.IO).launch {
+            var jasonread: GsonBuilder = GsonBuilder()
+            jasonread.setLenient()
+            var a = jasonread.create()
+            updateStatus(-1)
+            val data = async {
+                a.fromJson(
+                    URL("https://api.openweathermap.org/data/2.5/weather?id=${ctid[sell]}&units=metric&appid=$APIkey").readText(
+                        Charsets.UTF_8
+                    ), tcity::class.java
+                )
+            }.await()
+            if (data.name?.isNotEmpty() == true) {
+                updateWeatherData(data)
+                updateStatus(0)
+            } else {
+                updateStatus(1)
+            }
+        }
+    }
+    @SuppressLint("SetTextI18n")
+    suspend fun updateWeatherData(result: tcity){
         withContext(Dispatchers.Main){
+/*
             val jsonObj = JSONObject(result)
             val main = jsonObj.getJSONObject("main")
             val sys = jsonObj.getJSONObject("sys")
@@ -78,6 +91,7 @@ class MainActivity : AppCompatActivity() {
             val lastUpdateText = "Updated at: " + SimpleDateFormat(
                 "dd/MM/yyyy hh:mm a",
                 Locale.ENGLISH).format(Date(lastUpdate*1000))
+
             val currentTemperature = main.getString("temp")
             val temp = try{
                 currentTemperature.substring(0, currentTemperature.indexOf(".")) + "°C"
@@ -102,50 +116,45 @@ class MainActivity : AppCompatActivity() {
             findViewById<TextView>(R.id.tvAddress).setOnClickListener {
                 rlZip.isVisible = true
             }
-            findViewById<TextView>(R.id.tvupdate).text =  lastUpdateText
-            findViewById<TextView>(R.id.tvStatus).text = weatherDescription.capitalize(Locale.getDefault())
-            findViewById<TextView>(R.id.tvTemperature).text = temp
-            findViewById<TextView>(R.id.tvTempMin).text = tempMin
-            findViewById<TextView>(R.id.tvTempMax).text = tempMax
+
+ */
+            findViewById<TextView>(R.id.tvupdate).text =  "Updated at: "+SimpleDateFormat("dd/MM/yyyy hh:mm a",Locale.ENGLISH).format(Date(
+                result.dt?.toLong()?.times(1000)!!))
+            findViewById<TextView>(R.id.tvStatus).text = result.weather?.get(0)?.description?.replaceFirstChar {
+                if (it.isLowerCase()) it.titlecase(
+                    Locale.getDefault()
+                ) else it.toString()
+            }
+            findViewById<TextView>(R.id.tvTemperature).text = (result.main?.temp.toString()).substring(0,result.main?.temp.toString().indexOf('.'))+"°C"
+            findViewById<TextView>(R.id.tvTempMin).text = (result.main?.temp_min.toString()).substring(0,result.main?.temp_min.toString().indexOf('.'))+"°C"
+            findViewById<TextView>(R.id.tvTempMax).text = (result.main?.temp_max.toString()).substring(0,result.main?.temp_max.toString().indexOf('.'))+"°C"
             findViewById<TextView>(R.id.tvSunrise).text = SimpleDateFormat("hh:mm a",
-                Locale.ENGLISH).format(Date(sunrise*1000))
+                Locale.ENGLISH).format(Date(result.sys?.sunrise?.times(1000)!!.toLong()))
             findViewById<TextView>(R.id.tvSunset).text = SimpleDateFormat("hh:mm a",
-                Locale.ENGLISH).format(Date(sunset*1000))
-            findViewById<TextView>(R.id.tvWind).text = windSpeed
-            findViewById<TextView>(R.id.tvPressure).text = pressure
-            findViewById<TextView>(R.id.tvHumidity).text = humidity
-            findViewById<LinearLayout>(R.id.llRefresh).setOnClickListener { requestAPI() }
+                Locale.ENGLISH).format(Date(result.sys?.sunset?.times(1000)!!.toLong()))
+            findViewById<TextView>(R.id.tvWind).text = result.wind?.speed.toString()
+            findViewById<TextView>(R.id.tvPressure).text = result.main?.pressure.toString()
+            findViewById<TextView>(R.id.tvHumidity).text = result.main?.humidity.toString()
+            findViewById<LinearLayout>(R.id.llRefresh).setOnClickListener { APIrequest() }
         }
     }
 
 
 
-    private fun fetchWeatherData(): String{
-        var response = ""
-        try {
-            response = URL("https://api.openweathermap.org/data/2.5/weather?zip=${cid.city}&units=metric&appid=$APIkey")
-                .readText(Charsets.UTF_8)
-        }catch (e: Exception){
-            println("Error: $e")
-        }
-        return response
-    }
-
-
-    private suspend fun updateStatus(state: Int){
-//        states: -1 = loading, 0 = loaded, 1 = error
+    private suspend fun updateStatus(i: Int) {
+//        i: -1 = loading, 0 = loaded, 1 = error
         withContext(Dispatchers.Main){
             when{
-                state < 0 -> {
+                i < 0 -> {
                     findViewById<ProgressBar>(R.id.pbProgress).visibility = View.VISIBLE
                     findViewById<ConstraintLayout>(R.id.mscreen).visibility = View.GONE
                     findViewById<LinearLayout>(R.id.llErrorContainer).visibility = View.GONE
                 }
-                state == 0 -> {
+                i == 0 -> {
                     findViewById<ProgressBar>(R.id.pbProgress).visibility = View.GONE
                     findViewById<ConstraintLayout>(R.id.mscreen).visibility = View.VISIBLE
                 }
-                state > 0 -> {
+                i > 0 -> {
                     findViewById<ProgressBar>(R.id.pbProgress).visibility = View.GONE
                     findViewById<LinearLayout>(R.id.llErrorContainer).visibility = View.VISIBLE
                 }
@@ -154,7 +163,6 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-}
 
 
 //this function for easy reuse later to read json and convert it to class
