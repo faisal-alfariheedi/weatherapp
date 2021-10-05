@@ -18,7 +18,7 @@ import kotlin.collections.ArrayList
 
 
 class MainActivity : AppCompatActivity() {
-    private val APIkey = "87afbfc5e78daa067047fa4f5ee18ba2"
+    private val APIkey = "##"
     lateinit var sel: Spinner
     var cities= ArrayList<String>()
     var countries=ArrayList<String>()
